@@ -26,22 +26,131 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
-    .stMetric {
-        background-color: #f0f2f6;
+    /* Main container */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 1200px;
+    }
+
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        color: white;
+    }
+    [data-testid="stSidebar"] .stRadio label {
+        color: white !important;
+    }
+    [data-testid="stSidebar"] .stMarkdown {
+        color: #e0e0e0;
+    }
+
+    /* Metrics */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 12px;
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    [data-testid="stMetric"] label {
+        color: rgba(255,255,255,0.9) !important;
+        font-size: 0.9rem !important;
+    }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: white !important;
+        font-size: 2rem !important;
+        font-weight: bold !important;
+    }
+
+    /* Buttons */
+    .stButton>button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5);
+    }
+
+    /* Form submit button */
+    .stFormSubmitButton>button {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        width: 100%;
+    }
+
+    /* Task cards in expanders */
+    .streamlit-expanderHeader {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 10px;
+        font-weight: 600;
+    }
+    .streamlit-expanderContent {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 0 0 8px 8px;
         padding: 15px;
+    }
+
+    /* Tables */
+    .stDataFrame {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* Progress bar */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
         border-radius: 10px;
     }
-    .task-card {
-        background-color: #ffffff;
-        padding: 15px;
-        border-radius: 10px;
-        border-left: 4px solid #4CAF50;
-        margin-bottom: 10px;
+
+    /* Section headers */
+    h1, h2, h3 {
+        color: #1a1a2e;
+        font-weight: 700;
     }
-    .priority-P0 { border-left-color: #ff4444; }
-    .priority-P1 { border-left-color: #ff8800; }
-    .priority-P2 { border-left-color: #ffcc00; }
-    .priority-P3 { border-left-color: #888888; }
+    h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 2.5rem !important;
+    }
+
+    /* Info boxes */
+    .stAlert {
+        border-radius: 10px;
+        border-left-width: 4px;
+    }
+
+    /* Custom card */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 15px;
+    }
+
+    /* Multiselect */
+    .stMultiSelect [data-baseweb="tag"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    /* Success/Error messages */
+    .stSuccess {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -69,28 +178,48 @@ def get_status_color(status: str) -> str:
 
 # ==================== Sidebar ====================
 with st.sidebar:
-    st.title("Task Planner")
-    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; padding: 20px 0;">
+        <h1 style="color: white; font-size: 2rem; margin: 0;">Task Planner</h1>
+        <p style="color: rgba(255,255,255,0.7); margin: 5px 0 0 0;">Smart Task Management</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Navigation with icons
+    page_icons = {
+        "Dashboard": "📊",
+        "Today's Plan": "📅",
+        "Add Task": "➕",
+        "Task List": "📋",
+        "Statistics": "📈",
+        "Settings": "⚙️"
+    }
 
     page = st.radio(
         "Navigation",
-        ["Dashboard", "Today's Plan", "Add Task", "Task List", "Statistics", "Settings"],
+        list(page_icons.keys()),
+        format_func=lambda x: f"{page_icons[x]} {x}",
         index=0,
     )
 
+    st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown("### Quick Stats")
+    st.markdown("""
+    <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 0.8rem;">
+        <p>Powered by Notion API</p>
+        <p>v1.0</p>
+    </div>
+    """, unsafe_allow_html=True)
 
+    # Load tasks
     try:
         all_tasks = managers["notion"].get_tasks()
         todo_count = sum(1 for t in all_tasks if t["status"] == "Todo")
         in_progress_count = sum(1 for t in all_tasks if t["status"] == "In Progress")
         done_count = sum(1 for t in all_tasks if t["status"] == "Done")
-
-        st.metric("Total Tasks", len(all_tasks))
-        st.metric("In Progress", in_progress_count)
     except Exception as e:
-        st.error(f"Connection error: {e}")
         all_tasks = []
         todo_count = 0
         in_progress_count = 0
@@ -99,29 +228,45 @@ with st.sidebar:
 
 # ==================== Dashboard ====================
 if page == "Dashboard":
-    st.title("Dashboard")
+    st.markdown("# Dashboard")
+    st.markdown(f"### Welcome back! Here's your task overview for {datetime.now().strftime('%B %d, %Y')}")
 
     if not all_tasks:
-        st.info("No tasks yet. Add your first task!")
+        st.markdown("""
+        <div style="text-align: center; padding: 60px 20px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 15px; margin: 20px 0;">
+            <h2 style="color: #667eea;">No tasks yet!</h2>
+            <p style="color: #666; font-size: 1.1rem;">Click "Add Task" to create your first task</p>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         # Top metrics
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Total", len(all_tasks))
+            st.metric("Total Tasks", len(all_tasks))
         with col2:
-            st.metric("Todo", todo_count)
+            st.metric("To Do", todo_count)
         with col3:
             st.metric("In Progress", in_progress_count)
         with col4:
-            st.metric("Done", done_count)
+            st.metric("Completed", done_count)
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         # Progress bar
         completion_rate = done_count / len(all_tasks) if all_tasks else 0
         st.markdown("### Completion Progress")
-        st.progress(completion_rate)
-        st.caption(f"{completion_rate*100:.1f}% complete")
+        progress_col1, progress_col2 = st.columns([3, 1])
+        with progress_col1:
+            st.progress(completion_rate)
+        with progress_col2:
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 15px; border-radius: 10px; text-align: center;">
+                <span style="color: white; font-size: 1.5rem; font-weight: bold;">{completion_rate*100:.0f}%</span>
+            </div>
+            """, unsafe_allow_html=True)
 
         # Charts
+        st.markdown("<br>", unsafe_allow_html=True)
         col1, col2 = st.columns(2)
 
         with col1:
@@ -136,10 +281,17 @@ if page == "Dashboard":
                 names="Status",
                 color="Status",
                 color_discrete_map={
-                    "Todo": "#808080",
-                    "In Progress": "#2196F3",
-                    "Done": "#4CAF50"
+                    "Todo": "#94a3b8",
+                    "In Progress": "#3b82f6",
+                    "Done": "#10b981"
                 },
+                hole=0.6,
+            )
+            fig.update_layout(
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(t=20, b=20, l=20, r=20),
+                height=300,
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -160,25 +312,37 @@ if page == "Dashboard":
                 y="Count",
                 color="Priority",
                 color_discrete_map={
-                    "P0": "#ff4444",
-                    "P1": "#ff8800",
-                    "P2": "#ffcc00",
-                    "P3": "#888888"
+                    "P0": "#ef4444",
+                    "P1": "#f97316",
+                    "P2": "#eab308",
+                    "P3": "#6b7280"
                 },
+            )
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(t=20, b=20, l=20, r=20),
+                height=300,
+                xaxis_title="",
+                yaxis_title="",
             )
             st.plotly_chart(fig, use_container_width=True)
 
         # Recent tasks
+        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### Recent Tasks")
         for task in all_tasks[:5]:
-            with st.expander(f"[{task['priority']}] {task['title']}"):
-                col1, col2, col3 = st.columns(3)
+            priority_color = get_priority_color(task["priority"])
+            status_color = get_status_color(task["status"])
+            with st.expander(f"{task['priority']} | {task['title']}"):
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.write(f"**Status:** {task['status']}")
+                    st.markdown(f"**Status:** {task['status']}")
                 with col2:
-                    st.write(f"**Due:** {task.get('due_date', 'N/A')}")
+                    st.markdown(f"**Due:** {task.get('due_date', 'N/A')}")
                 with col3:
-                    st.write(f"**Est Time:** {task.get('estimated_time', 'N/A')} min")
+                    st.markdown(f"**Est Time:** {task.get('estimated_time', 'N/A')} min")
+                with col4:
+                    st.markdown(f"**Tags:** {', '.join(task.get('tags', [])) or 'None'}")
 
 
 # ==================== Today's Plan ====================
