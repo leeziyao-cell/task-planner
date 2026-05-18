@@ -31,6 +31,30 @@ st.markdown("""
         padding-top: 2rem;
         padding-bottom: 2rem;
         max-width: 1200px;
+        font-size: 18px;
+    }
+
+    /* Increase all font sizes */
+    p, li, label, .stTextInput label, .stSelectbox label, .stNumberInput label,
+    .stMultiSelect label, .stDateInput label, .stTimeInput label, .stTextArea label {
+        font-size: 18px !important;
+    }
+
+    h1 { font-size: 2.8rem !important; }
+    h2 { font-size: 2rem !important; }
+    h3 { font-size: 1.5rem !important; }
+
+    .stMetric [data-testid="stMetricValue"] {
+        font-size: 2.5rem !important;
+    }
+
+    .stButton>button {
+        font-size: 18px !important;
+        padding: 12px 28px !important;
+    }
+
+    .stTextInput input, .stSelectbox, .stNumberInput input, .stTextArea textarea {
+        font-size: 18px !important;
     }
 
     /* Sidebar styling */
@@ -193,6 +217,7 @@ with st.sidebar:
         "Today's Plan": "📅",
         "Add Task": "➕",
         "Task List": "📋",
+        "Timer": "⏱️",
         "Statistics": "📈",
         "Settings": "⚙️"
     }
@@ -543,9 +568,118 @@ elif page == "Task List":
                             st.error(f"Error: {e}")
 
 
+# ==================== Timer ====================
+elif page == "Timer":
+    st.markdown("# Timer")
+    st.markdown("### Focus Timer - Track your work sessions")
+
+    # Initialize session state for timer
+    if "timer_running" not in st.session_state:
+        st.session_state.timer_running = False
+        st.session_state.timer_start = None
+        st.session_state.timer_task = None
+        st.session_state.timer_elapsed = 0
+
+    # Timer display
+    if st.session_state.timer_running and st.session_state.timer_start:
+        elapsed = int((datetime.now() - st.session_state.timer_start).total_seconds())
+        st.session_state.timer_elapsed = elapsed
+    else:
+        elapsed = st.session_state.timer_elapsed
+
+    hours = elapsed // 3600
+    minutes = (elapsed % 3600) // 60
+    seconds = elapsed % 60
+
+    # Big timer display
+    st.markdown(f"""
+    <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; margin: 20px 0;">
+        <h1 style="color: white; font-size: 4rem; margin: 0; letter-spacing: 5px;">
+            {hours:02d}:{minutes:02d}:{seconds:02d}
+        </h1>
+        <p style="color: rgba(255,255,255,0.8); font-size: 1.2rem; margin-top: 10px;">
+            {"Running" if st.session_state.timer_running else "Paused"}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Task selection
+    st.markdown("### Select Task")
+    todo_tasks = [t for t in all_tasks if t["status"] in ["Todo", "In Progress"]]
+
+    if todo_tasks:
+        task_options = [f"[{t['priority']}] {t['title']}" for t in todo_tasks]
+        selected_task_idx = st.selectbox(
+            "Choose a task to track",
+            range(len(task_options)),
+            format_func=lambda x: task_options[x],
+        )
+        selected_task = todo_tasks[selected_task_idx]
+    else:
+        st.info("No tasks available. Add a task first!")
+        selected_task = None
+
+    # Timer controls
+    st.markdown("### Controls")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("Start", disabled=st.session_state.timer_running or not selected_task):
+            st.session_state.timer_running = True
+            st.session_state.timer_start = datetime.now()
+            st.session_state.timer_task = selected_task["id"]
+            st.rerun()
+
+    with col2:
+        if st.button("Pause", disabled=not st.session_state.timer_running):
+            st.session_state.timer_running = False
+            st.rerun()
+
+    with col3:
+        if st.button("Reset"):
+            st.session_state.timer_running = False
+            st.session_state.timer_start = None
+            st.session_state.timer_elapsed = 0
+            st.session_state.timer_task = None
+            st.rerun()
+
+    # Save session
+    st.markdown("---")
+    if st.button("Save Session") and st.session_state.timer_elapsed > 0 and selected_task:
+        try:
+            # Record time
+            managers["scheduler"].record_actual_time(
+                selected_task["title"],
+                st.session_state.timer_elapsed // 60
+            )
+            st.success(f"Session saved: {st.session_state.timer_elapsed // 60} minutes for {selected_task['title']}")
+            # Reset timer
+            st.session_state.timer_running = False
+            st.session_state.timer_start = None
+            st.session_state.timer_elapsed = 0
+            st.session_state.timer_task = None
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error saving session: {e}")
+
+    # Timer stats
+    st.markdown("---")
+    st.markdown("### Today's Sessions")
+    if st.session_state.timer_elapsed > 0:
+        st.info(f"Current session: {st.session_state.timer_elapsed // 60} minutes")
+    else:
+        st.info("No active session")
+
+    # Auto-refresh if timer is running
+    if st.session_state.timer_running:
+        import time
+        time.sleep(1)
+        st.rerun()
+
+
 # ==================== Statistics ====================
 elif page == "Statistics":
-    st.title("Statistics")
+    st.markdown("# Statistics")
 
     if not all_tasks:
         st.info("No data to analyze yet")
