@@ -385,12 +385,103 @@ elif page == "Today's Plan":
         st.markdown("### Pending Tasks (Sorted by Priority)")
         for i, task in enumerate(sorted_tasks, 1):
             priority_color = get_priority_color(task["priority"])
-            st.markdown(f"""
-            <div style="padding: 10px; border-left: 4px solid {priority_color}; margin: 5px 0; background: #f9f9f9;">
-                <strong>{i}. {task['title']}</strong> [{task['priority']}]<br>
-                <small>Due: {task.get('due_date', 'N/A')} | Est: {task.get('estimated_time', 'N/A')} min</small>
-            </div>
-            """, unsafe_allow_html=True)
+
+            with st.expander(f"{task['priority']} | {task['title']}"):
+                # Task info
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown(f"**Priority:** {task['priority']}")
+                with col2:
+                    st.markdown(f"**Due:** {task.get('due_date', 'N/A')}")
+                with col3:
+                    st.markdown(f"**Est Time:** {task.get('estimated_time', 'N/A')} min")
+
+                if task.get("tags"):
+                    st.markdown(f"**Tags:** {', '.join(task['tags'])}")
+                if task.get("notes"):
+                    st.markdown(f"**Notes:** {task['notes']}")
+
+                st.markdown("---")
+
+                # Action buttons
+                col1, col2, col3, col4 = st.columns(4)
+
+                with col1:
+                    if st.button("Edit", key=f"edit_plan_{task['id']}"):
+                        st.session_state.editing_task = task
+                        st.rerun()
+
+                with col2:
+                    if st.button("Delete", key=f"delete_plan_{task['id']}"):
+                        try:
+                            managers["notion"].delete_task(task["id"])
+                            st.success(f"Deleted: {task['title']}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+
+                with col3:
+                    if st.button("Start", key=f"start_plan_{task['id']}"):
+                        try:
+                            managers["notion"].update_task(task["id"], status="In Progress")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+
+                with col4:
+                    if st.button("Done", key=f"done_plan_{task['id']}"):
+                        try:
+                            managers["notion"].update_task(task["id"], status="Done")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+
+        # Edit task modal
+        if "editing_task" in st.session_state and st.session_state.editing_task:
+            st.markdown("---")
+            st.markdown("### Edit Task")
+            edit_task = st.session_state.editing_task
+
+            with st.form("edit_task_form"):
+                new_title = st.text_input("Title", value=edit_task["title"])
+                col1, col2 = st.columns(2)
+                with col1:
+                    priority_idx = ["P0", "P1", "P2", "P3"].index(edit_task.get("priority", "P2"))
+                    new_priority = st.selectbox("Priority", ["P0", "P1", "P2", "P3"], index=priority_idx)
+                with col2:
+                    new_due = st.date_input("Due Date")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    new_est_time = st.number_input("Est Time (min)", value=edit_task.get("estimated_time") or 30, min_value=5, max_value=480, step=5)
+                with col2:
+                    new_tags = st.multiselect("Tags", ["Research", "Writing", "Experiment", "Meeting", "Learning"],
+                                              default=edit_task.get("tags", []))
+
+                new_notes = st.text_area("Notes", value=edit_task.get("notes", ""))
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("Save Changes"):
+                        try:
+                            managers["notion"].update_task(
+                                edit_task["id"],
+                                title=new_title,
+                                priority=new_priority,
+                                due_date=new_due.strftime("%Y-%m-%d"),
+                                est_time=new_est_time,
+                                tags=new_tags,
+                                notes=new_notes,
+                            )
+                            del st.session_state.editing_task
+                            st.success("Task updated!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                with col2:
+                    if st.form_submit_button("Cancel"):
+                        del st.session_state.editing_task
+                        st.rerun()
 
         # Generate schedule
         st.markdown("---")
