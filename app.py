@@ -645,14 +645,33 @@ elif page == "Timer":
 
     # Save session
     st.markdown("---")
-    if st.button("Save Session") and st.session_state.timer_elapsed > 0 and selected_task:
+    st.markdown("### Save Session")
+    st.markdown(f"Time to save: **{st.session_state.timer_elapsed // 60} minutes**")
+
+    if st.button("Save Session", type="primary") and st.session_state.timer_elapsed > 0 and selected_task:
         try:
-            # Record time
+            minutes = st.session_state.timer_elapsed // 60
+
+            # Save to local history
             managers["scheduler"].record_actual_time(
                 selected_task["title"],
-                st.session_state.timer_elapsed // 60
+                minutes
             )
-            st.success(f"Session saved: {st.session_state.timer_elapsed // 60} minutes for {selected_task['title']}")
+
+            # Update Notion task
+            try:
+                # Get current actual time and add new time
+                current_actual = selected_task.get("actual_time") or 0
+                new_actual = current_actual + minutes
+                managers["notion"].update_task(
+                    selected_task["id"],
+                    actual_time=new_actual
+                )
+            except Exception as notion_error:
+                st.warning(f"Local saved, but Notion update failed: {notion_error}")
+
+            st.success(f"Session saved! {minutes} minutes recorded for {selected_task['title']}")
+
             # Reset timer
             st.session_state.timer_running = False
             st.session_state.timer_start = None

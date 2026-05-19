@@ -145,7 +145,7 @@ class NotionTaskManager:
     def update_task(self, task_id: str, **kwargs) -> None:
         """更新任务属性
 
-        支持的属性: title, status, priority, due_date, est_time, tags, notes
+        支持的属性: title, status, priority, due_date, est_time, actual_time, tags, notes
         """
         properties = {}
 
@@ -168,6 +168,9 @@ class NotionTaskManager:
 
         if "est_time" in kwargs:
             properties["Est Time"] = {"number": kwargs["est_time"]}
+
+        if "actual_time" in kwargs:
+            properties["Actual Time"] = {"number": kwargs["actual_time"]}
 
         if "tags" in kwargs:
             properties["Tags"] = {
@@ -285,6 +288,7 @@ class NotionTaskManager:
             "priority": self._get_select(props.get("Priority")) or "P2",
             "due_date": self._get_date(props.get("Due Date")),
             "estimated_time": self._get_number(props.get("Est Time")),
+            "actual_time": self._get_number(props.get("Actual Time")),
             "tags": self._get_multi_select(props.get("Tags")),
             "notes": self._get_rich_text(props.get("Notes")),
             "created_time": page.get("created_time"),
