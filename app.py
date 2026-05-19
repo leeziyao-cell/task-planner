@@ -579,6 +579,7 @@ elif page == "Timer":
         st.session_state.timer_start = None
         st.session_state.timer_task = None
         st.session_state.timer_elapsed = 0
+        st.session_state.timer_sessions = []  # 保存的历史会话
 
     # Timer display
     if st.session_state.timer_running and st.session_state.timer_start:
@@ -660,7 +661,6 @@ elif page == "Timer":
 
             # Update Notion task
             try:
-                # Get current actual time and add new time
                 current_actual = selected_task.get("actual_time") or 0
                 new_actual = current_actual + minutes
                 managers["notion"].update_task(
@@ -669,6 +669,14 @@ elif page == "Timer":
                 )
             except Exception as notion_error:
                 st.warning(f"Local saved, but Notion update failed: {notion_error}")
+
+            # Add to session history
+            st.session_state.timer_sessions.append({
+                "task": selected_task["title"],
+                "priority": selected_task["priority"],
+                "minutes": minutes,
+                "time": datetime.now().strftime("%H:%M"),
+            })
 
             st.success(f"Session saved! {minutes} minutes recorded for {selected_task['title']}")
 
@@ -684,10 +692,46 @@ elif page == "Timer":
     # Timer stats
     st.markdown("---")
     st.markdown("### Today's Sessions")
-    if st.session_state.timer_elapsed > 0:
-        st.info(f"Current session: {st.session_state.timer_elapsed // 60} minutes")
+
+    # Show current running session
+    if st.session_state.timer_running:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+            <strong>Running:</strong> {selected_task['title'] if selected_task else 'Unknown'} - {st.session_state.timer_elapsed // 60} min
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Show saved sessions
+    if st.session_state.timer_sessions:
+        total_time = sum(s["minutes"] for s in st.session_state.timer_sessions)
+
+        # Session list
+        for i, session in enumerate(reversed(st.session_state.timer_sessions), 1):
+            st.markdown(f"""
+            <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid {get_priority_color(session['priority'])};">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>{session['task']}</strong>
+                        <span style="color: #666; font-size: 0.9rem;"> [{session['priority']}]</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-weight: bold; color: #667eea;">{session['minutes']} min</span>
+                        <span style="color: #999; font-size: 0.8rem; margin-left: 10px;">{session['time']}</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Total summary
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin-top: 15px; text-align: center;">
+            <span style="color: white; font-size: 1.1rem;">Total Today: </span>
+            <span style="color: white; font-size: 1.8rem; font-weight: bold;">{total_time} minutes</span>
+            <span style="color: rgba(255,255,255,0.8); font-size: 0.9rem;"> ({len(st.session_state.timer_sessions)} sessions)</span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.info("No active session")
+        st.info("No sessions recorded yet today")
 
     # Auto-refresh if timer is running
     if st.session_state.timer_running:
