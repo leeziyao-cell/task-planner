@@ -705,18 +705,35 @@ elif page == "Timer":
     if st.session_state.timer_sessions:
         total_time = sum(s["minutes"] for s in st.session_state.timer_sessions)
 
-        # Session list
-        for i, session in enumerate(reversed(st.session_state.timer_sessions), 1):
+        # Group sessions by task name
+        task_groups = {}
+        for session in st.session_state.timer_sessions:
+            task_name = session["task"]
+            if task_name not in task_groups:
+                task_groups[task_name] = {
+                    "priority": session["priority"],
+                    "total_minutes": 0,
+                    "sessions": 0,
+                    "last_time": session["time"],
+                }
+            task_groups[task_name]["total_minutes"] += session["minutes"]
+            task_groups[task_name]["sessions"] += 1
+            task_groups[task_name]["last_time"] = session["time"]
+
+        # Display grouped tasks
+        for task_name, info in task_groups.items():
+            sessions_text = f" ({info['sessions']} sessions)" if info['sessions'] > 1 else ""
             st.markdown(f"""
-            <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid {get_priority_color(session['priority'])};">
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid {get_priority_color(info['priority'])};">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <strong>{session['task']}</strong>
-                        <span style="color: #666; font-size: 0.9rem;"> [{session['priority']}]</span>
+                        <strong style="font-size: 1.1rem;">{task_name}</strong>
+                        <span style="color: #666; font-size: 0.9rem;"> [{info['priority']}]</span>
+                        <span style="color: #999; font-size: 0.8rem;">{sessions_text}</span>
                     </div>
                     <div style="text-align: right;">
-                        <span style="font-weight: bold; color: #667eea;">{session['minutes']} min</span>
-                        <span style="color: #999; font-size: 0.8rem; margin-left: 10px;">{session['time']}</span>
+                        <span style="font-weight: bold; color: #667eea; font-size: 1.3rem;">{info['total_minutes']} min</span>
+                        <span style="color: #999; font-size: 0.8rem; margin-left: 10px;">last: {info['last_time']}</span>
                     </div>
                 </div>
             </div>
@@ -727,7 +744,7 @@ elif page == "Timer":
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin-top: 15px; text-align: center;">
             <span style="color: white; font-size: 1.1rem;">Total Today: </span>
             <span style="color: white; font-size: 1.8rem; font-weight: bold;">{total_time} minutes</span>
-            <span style="color: rgba(255,255,255,0.8); font-size: 0.9rem;"> ({len(st.session_state.timer_sessions)} sessions)</span>
+            <span style="color: rgba(255,255,255,0.8); font-size: 0.9rem;"> ({len(task_groups)} tasks, {len(st.session_state.timer_sessions)} sessions)</span>
         </div>
         """, unsafe_allow_html=True)
     else:
